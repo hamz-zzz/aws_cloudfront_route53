@@ -228,8 +228,9 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Distribution](screenshots/3-1-cloudfront-distribution-overview.png)
 
-- CloudFront distribution configured as the public entry point
-- Custom domain and default root object attached
+- CloudFront distribution configured as the edge entry point
+- Custom domains (`systemsbyhamza.com` and `www.systemsbyhamza.com`) associated
+- Default root object set to `index.html` for root path resolution
 
 ---
 
@@ -347,23 +348,13 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![nslookup](screenshots/7-1-nslookup-output.png)
 
-- Resolves `systemsbyhamza.com` to multiple CloudFront edge IPs
-- Shows Route 53 alias resolution in effect
-
----
-
 ### dig
 
 ![dig](screenshots/7-2-dig-output.png)
 
-- DNS query returns multiple A records
-- Confirms CloudFront distribution as the resolved endpoint
-- Includes both IPv4 and IPv6 responses
-
----
-
-- DNS resolution maps the custom domain to CloudFront infrastructure
-- Multiple IPs reflect CloudFront’s globally distributed edge network
+- `systemsbyhamza.com` resolves to multiple CloudFront edge IPs
+- Includes both IPv4 and IPv6 records
+- Confirms Route 53 alias-based resolution to CloudFront
 
 ---
 
@@ -374,8 +365,7 @@ This project implements a secure, globally distributed static website using Amaz
 ![CloudFront](screenshots/8-1-cloudfront-domain-access.png)
 
 - Direct access via CloudFront distribution domain
-- Bypasses Route 53 and uses CloudFront default domain name
-- Validates CDN endpoint independently of custom DNS configuration
+- No DNS abstraction layer involved
 
 ---
 
@@ -384,8 +374,7 @@ This project implements a secure, globally distributed static website using Amaz
 ![Root Domain](screenshots/5-1-site-homepage.png)
 
 - Access via `https://systemsbyhamza.com`
-- Resolved using Route 53 alias A/AAAA records
-- Routes directly to CloudFront distribution
+- Resolved through Route 53 alias A/AAAA records
 
 ---
 
@@ -394,15 +383,14 @@ This project implements a secure, globally distributed static website using Amaz
 ![WWW Domain](screenshots/8-2-www-domain-access.png)
 
 - Access via `https://www.systemsbyhamza.com`
-- Resolved using Route 53 CNAME record
-- CNAME points to root domain, which resolves to CloudFront
+- Resolved via CNAME pointing to root domain
 
 ---
 
-- Demonstrates three distinct resolution paths:
-  - Direct CloudFront endpoint access
-  - Alias-based apex domain routing (A/AAAA → CloudFront)
-  - CNAME-based subdomain delegation (WWW → apex → CloudFront)
+- Demonstrates three DNS resolution models:
+  - Direct CloudFront endpoint access (no DNS dependency)
+  - Alias-based apex routing (Route 53 → CloudFront)
+  - CNAME delegation chain (WWW → apex → CloudFront)
 
 ---
 
