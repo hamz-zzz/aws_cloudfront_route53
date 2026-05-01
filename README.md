@@ -112,24 +112,50 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Domain Registered](screenshots/1-1-domain-registered.png)
 
+- Domain `systemsbyhamza.com` registered via Route 53
+- Registration enables full DNS control
+
+---
+
 ### Hosted Zone
 
 ![Hosted Zone](screenshots/1-2-hosted-zone-overview.png)
 
-### A Record (IPv4)
+- Public hosted zone for `systemsbyhamza.com`
+- Contains NS and SOA records
+- Acts as the authoritative DNS zone
+
+---
+
+### A Record (IPv4 Alias)
 
 ![A Record](screenshots/1-3-root-alias-a-record.png)
 
-### AAAA Record (IPv6)
+- Root domain mapped to CloudFront via alias record
+- Enables IPv4 routing through Route 53
+
+---
+
+### AAAA Record (IPv6 Alias)
 
 ![AAAA Record](screenshots/1-4-root-alias-aaaa-record.png)
 
-### WWW CNAME
+- IPv6 alias record pointing to CloudFront
+- Enables dual-stack access
+
+---
+
+### WWW CNAME Record
 
 ![CNAME](screenshots/1-5-www-cname-record.png)
 
-- Route 53 resolves the domain to CloudFront  
-- Dual-stack DNS enables IPv4 and IPv6 access  
+- `www` subdomain configured using CNAME
+- Points to root domain
+
+---
+
+- Route 53 manages DNS resolution for both root and subdomain
+- CloudFront is the single backend origin for all DNS paths
 
 ---
 
@@ -139,28 +165,60 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Bucket](screenshots/2-1-s3-bucket-overview.png)
 
+- S3 bucket used to store static website assets
+- Acts as the origin for CloudFront delivery
+
+---
+
 ### Public Access Blocked
 
 ![Block Public](screenshots/2-2-s3-block-public-access.png)
 
-### Object Structure
+- Public access is fully disabled at bucket level
+- Prevents any direct HTTP access to objects
+
+---
+
+### Root Object Structure
 
 ![Objects](screenshots/2-3-s3-objects-structure.png)
 
-### Images
+- Contains:
+  - `index.html` (application entry point)
+  - `images/` prefix (static assets)
+- Root object is served via CloudFront default configuration
+
+---
+
+### Images Folder
 
 ![Images](screenshots/2-4-s3-images-folder.png)
+
+- Stores static image assets:
+  - `ubuntu.png`
+  - `fedora.png`
+  - `arch.png`
+- Referenced by `index.html` for page rendering
+
+---
 
 ### Bucket Policy
 
 ![Policy](screenshots/2-5-s3-bucket-policy.png)
 
+- Access restricted to CloudFront distribution via OAC
+- Prevents direct S3 origin access
+- Enforces controlled content delivery path
+
+---
+
 ### Access Denied Validation
 
 ![AccessDenied](screenshots/2-6-s3-access-denied-test.png)
 
-- Confirms S3 is private  
-- Only CloudFront can access content  
+- Direct S3 object access is blocked
+- Confirms origin is not publicly exposed
+- Validates CloudFront as the only entry point
 
 ---
 
@@ -170,16 +228,28 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Distribution](screenshots/3-1-cloudfront-distribution-overview.png)
 
+- CloudFront distribution configured as the public entry point
+- Custom domain and default root object attached
+
+---
+
 ### Origin Configuration
 
 ![Origin](screenshots/3-2-cloudfront-origin-config.png)
+
+- Origin points to private S3 bucket (non-website endpoint)
+- Access controlled via Origin Access Control (OAC)
+- Direct S3 access is not permitted
+
+---
 
 ### Behavior Settings
 
 ![Behavior](screenshots/3-3-cloudfront-behavior-settings.png)
 
-- CloudFront acts as secure edge layer  
-- Enforces HTTPS and caching  
+- HTTP requests are redirected to HTTPS
+- GET/HEAD methods enabled for static content delivery
+- Caching policies applied for edge optimization
 
 ---
 
@@ -189,8 +259,9 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Certificate](screenshots/4-1-acm-certificate-issued.png)
 
-- Certificate successfully issued and attached  
-- Enables encrypted communication  
+- ACM certificate issued in `us-east-1`
+- Attached to CloudFront distribution
+- Enables TLS encryption for custom domain traffic
 
 ---
 
@@ -200,16 +271,27 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Homepage](screenshots/5-1-site-homepage.png)
 
+- Static site successfully rendered through CloudFront
+- `index.html` served as default root object
+
+---
+
 ### HTTPS Validation
 
 ![HTTPS](screenshots/5-2-site-https-cert.png)
+
+- HTTPS enabled via ACM certificate
+- Browser confirms valid TLS connection for custom domain
+
+---
 
 ### Static Asset Delivery
 
 ![Images](screenshots/5-3-image-direct-load.png)
 
-- Content delivered via CloudFront  
-- Images served from S3 through CDN  
+- Images loaded from `/images` path
+- Objects retrieved from S3 via CloudFront distribution
+- Confirms CDN-based asset delivery
 
 ---
 
@@ -219,20 +301,43 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Miss](screenshots/6-1-cache-miss.png)
 
+- First request served from origin via CloudFront
+- Edge cache not yet populated
+
+---
+
 ### Cache Hit
 
 ![Hit](screenshots/6-2-cache-hit.png)
+
+- Subsequent request served from CloudFront edge cache
+- Origin not contacted
+
+---
 
 ### Invalidation
 
 ![Invalidation](screenshots/6-3-cache-invalidation.png)
 
+- Cache invalidation triggered for `/*`
+- Forces edge locations to refresh content from origin
+
+---
+
 ### Cache Reset
 
 ![Reset](screenshots/6-4-cache-after-invalidation.png)
 
-- Demonstrates CloudFront caching lifecycle  
-- Shows edge cache behavior and refresh  
+- Cache state reset after invalidation
+- Next request results in cache miss
+
+---
+
+- Demonstrates CloudFront request lifecycle:
+  - Origin fetch
+  - Edge caching
+  - Cache hit optimization
+  - Manual invalidation control
 
 ---
 
@@ -242,12 +347,23 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![nslookup](screenshots/7-1-nslookup-output.png)
 
+- Resolves `systemsbyhamza.com` to multiple CloudFront edge IPs
+- Shows Route 53 alias resolution in effect
+
+---
+
 ### dig
 
 ![dig](screenshots/7-2-dig-output.png)
 
-- Multiple IPs returned → CloudFront edge network  
-- Confirms Anycast routing and global distribution  
+- DNS query returns multiple A records
+- Confirms CloudFront distribution as the resolved endpoint
+- Includes both IPv4 and IPv6 responses
+
+---
+
+- DNS resolution maps the custom domain to CloudFront infrastructure
+- Multiple IPs reflect CloudFront’s globally distributed edge network
 
 ---
 
@@ -257,8 +373,9 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![CloudFront](screenshots/8-1-cloudfront-domain-access.png)
 
-- Direct access via CloudFront distribution domain  
-- Confirms CDN is serving content independently of DNS layer  
+- Direct access via CloudFront distribution domain
+- Bypasses Route 53 and uses CloudFront default domain name
+- Validates CDN endpoint independently of custom DNS configuration
 
 ---
 
@@ -266,8 +383,9 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![Root Domain](screenshots/5-1-site-homepage.png)
 
-- Access via `https://systemsbyhamza.com`  
-- Resolved using Route 53 alias A/AAAA records → CloudFront  
+- Access via `https://systemsbyhamza.com`
+- Resolved using Route 53 alias A/AAAA records
+- Routes directly to CloudFront distribution
 
 ---
 
@@ -275,16 +393,16 @@ This project implements a secure, globally distributed static website using Amaz
 
 ![WWW Domain](screenshots/8-2-www-domain-access.png)
 
-- Access via `https://www.systemsbyhamza.com`  
-- Resolved using Route 53 CNAME record → root domain  
-- Confirms subdomain routing and DNS aliasing behavior  
+- Access via `https://www.systemsbyhamza.com`
+- Resolved using Route 53 CNAME record
+- CNAME points to root domain, which resolves to CloudFront
 
 ---
 
-- Application accessible via:
-  - CloudFront domain  
-  - Root domain (`systemsbyhamza.com`)  
-  - WWW subdomain (`www.systemsbyhamza.com`)  
+- Demonstrates three distinct resolution paths:
+  - Direct CloudFront endpoint access
+  - Alias-based apex domain routing (A/AAAA → CloudFront)
+  - CNAME-based subdomain delegation (WWW → apex → CloudFront)
 
 ---
 
