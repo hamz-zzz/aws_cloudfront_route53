@@ -1,0 +1,698 @@
+Below is a **complete, ordered build guide** for your combined project:
+
+> **Route 53 + Custom Domain + CloudFront + S3 (Private Origin + OAC + ACM HTTPS)**
+
+This is a production-style setup. Follow the order exactly; AWS is sensitive to sequence here.
+
+---
+
+# 🧱 TARGET ARCHITECTURE (what you are building)
+
+```
+User
+  ↓
+Route 53 (systemsbyhamza.com DNS)
+  ↓
+CloudFront (HTTPS + caching)
+  ↓
+S3 (PRIVATE bucket via OAC)
+```
+
+---
+
+# 0. PREREQUISITES
+
+You will need:
+
+* AWS account
+* Domain: `systemsbyhamza.com` (buy via Route 53 later in step 1)
+* Region awareness:
+
+  * S3: any region
+  * CloudFront: global
+  * ACM: MUST be us-east-1 (important)
+
+---
+
+# 1. BUY DOMAIN (Route 53)
+
+Go to:
+Amazon Route 53
+
+### Steps:
+
+1. Open Route 53 console
+2. Go to **Registered domains**
+3. Click **Register domain**
+4. Enter:
+
+   * `systemsbyhamza.com`
+5. Complete purchase
+
+### Wait for:
+
+* Domain status → “Active” (can take 5–30 minutes)
+
+---
+
+# 2. CREATE HOSTED ZONE (DNS CONTROL PLANE)
+
+In Route 53:
+
+1. Go to **Hosted zones**
+2. Click **Create hosted zone**
+3. Domain: `systemsbyhamza.com`
+4. Type: Public hosted zone
+
+You will now see:
+
+* NS records
+* SOA record
+
+### IMPORTANT:
+
+Route 53 will auto-link domain → hosted zone (if purchased in same account)
+
+---
+
+# 3. CREATE S3 BUCKET (PRIVATE ORIGIN)
+
+Go to:
+Amazon S3
+
+### Steps:
+
+1. Create bucket:
+
+   * Name: `systemsbyhamza-static-origin`
+   * Region: any (e.g. us-east-1)
+
+2. SETTINGS (critical):
+
+   * ❌ Block all public access = ON
+   * Enable default encryption = ON
+
+3. Upload file:
+
+**index.html**
+
+```html id="kq3v0a"
+<html>
+  <body>
+
+    <h1>SystemsByHamza CloudFront Demo</h1>
+    <p>Private S3 origin | Delivered via CloudFront</p>
+
+<br><br>
+
+    <h2>Popular Linux Distributions</h2>
+
+    <p>Ubuntu</p>
+    <img src="/images/ubuntu.png" width="140">
+
+<br><br>
+
+    <p>Fedora</p>
+    <img src="/images/fedora.png" width="140">
+
+<br><br>
+
+    <p>Arch Linux</p>
+    <img src="/images/arch.png" width="140">
+
+  </body>
+</html>
+```
+
+---
+
+# 4. CREATE ACM CERTIFICATE (HTTPS)
+
+Go to:
+AWS Certificate Manager
+
+### IMPORTANT RULE:
+
+CloudFront ONLY uses ACM certificates from:
+
+> **us-east-1 (N. Virginia)**
+
+---
+
+### Steps:
+
+1. Switch region → **us-east-1**
+
+2. Open ACM → Request certificate
+
+3. Domain names:
+
+   * `systemsbyhamza.com`
+   * `www.systemsbyhamza.com`
+
+4. Validation method:
+
+   * Choose **DNS validation**
+
+5. ACM will give CNAME records
+
+---
+
+### Now go back to Route 53:
+
+* Hosted Zone → Add the ACM validation CNAME records
+* Wait for:
+
+  * Status → **Issued**
+
+---
+
+# 5. CREATE CLOUDFRONT DISTRIBUTION
+
+Go to:
+Amazon CloudFront
+
+### Steps:
+
+## Origin
+
+* Origin domain: select your S3 bucket
+* DO NOT use S3 website endpoint
+
+---
+
+## Enable Origin Access Control (OAC)
+
+1. Click “Create Origin Access Control”
+2. Settings:
+
+   * Signing behavior: **Sign requests**
+   * Origin type: S3
+
+CloudFront will later generate S3 policy.
+
+---
+
+## Default cache behavior
+
+* Viewer protocol policy: **Redirect HTTP → HTTPS**
+* Allowed methods: GET, HEAD
+* Cache policy: CachingOptimized (default is fine)
+
+---
+
+## Settings section
+
+### Add:
+
+* Alternate domain name (CNAME):
+
+  * `systemsbyhamza.com`
+
+### SSL Certificate:
+
+* Select ACM cert (from us-east-1)
+
+---
+
+## Default root object:
+
+```
+index.html
+```
+
+---
+
+# 6. FIX S3 BUCKET POLICY (CRITICAL STEP)
+
+After CloudFront is created:
+
+Go to CloudFront → copy generated **bucket policy**
+
+Then:
+
+S3 → Bucket → Permissions → Bucket Policy:
+
+Paste policy similar to:
+
+* Allow `cloudfront.amazonaws.com`
+* Restrict to your distribution ARN
+
+This enforces:
+
+> ONLY CloudFront can read S3 objects
+
+---
+
+# 7. CREATE ROUTE 53 DNS RECORDS
+
+Go to:
+Amazon Route 53
+
+Inside Hosted Zone:
+
+## Create A record:
+
+### Record 1 (root domain)
+
+* Name: `systemsbyhamza.com`
+* Type: A
+* Alias: YES
+* Target: CloudFront distribution
+
+(Cloudfront automatically created two records, A and AAAA for itself for systemsbyhamza.com)
+
+---
+
+### Record 2 (www optional)
+
+* Name: `www.systemsbyhamza.com`
+* Type: CNAME
+* Target: systemsbyhamza.com
+
+---
+
+# 8. TEST EVERYTHING
+
+## Test 1: DNS resolution
+
+```bash
+nslookup systemsbyhamza.com
+```
+
+Should resolve to CloudFront.
+
+---
+
+## Test 2: HTTPS
+
+Open:
+
+```
+https://systemsbyhamza.com
+```
+
+Expected:
+
+* lock icon (TLS working)
+* page loads from S3 via CloudFront
+
+---
+
+## Test 3: S3 direct access
+
+Try S3 object URL:
+
+❌ Should FAIL (AccessDenied)
+
+This confirms:
+
+> private origin is enforced
+
+---
+
+## Test 4: CloudFront caching
+
+Open DevTools → Network tab:
+
+Look for:
+
+* `x-cache: Hit from cloudfront`
+* `x-cache: Miss from cloudfront`
+
+---
+
+# 9. VERIFY SECURITY MODEL
+
+You should now have:
+
+### Public:
+
+* Route 53 DNS
+* CloudFront HTTPS endpoint
+
+### Private:
+
+* S3 bucket (fully blocked)
+* No direct object access
+
+---
+
+# 🧠 WHAT YOU JUST BUILT (resume interpretation)
+
+You now have:
+
+### Edge networking layer
+
+* CloudFront CDN
+* global caching
+
+### DNS routing layer
+
+* Route 53 hosted zone
+* domain ownership + resolution
+
+### Secure storage layer
+
+* private S3 origin
+* OAC-based access control
+
+### Security layer
+
+* TLS via ACM
+* origin shielding
+* no public bucket exposure
+
+---
+
+Good—what you’ve built is exactly what you need. Now the goal is to **prove architecture, security, and behavior** through screenshots. Think like an interviewer: *“Can I verify each claim visually?”*
+
+Below is a **complete, ordered screenshot plan** with exact filenames and what each must show.
+
+---
+
+# 📸 SECTION 1 — DOMAIN + DNS (Route 53)
+
+### **1-1-domain-registered.png**
+
+Show:
+
+* Registered domain: `systemsbyhamza.com`
+* Status: Active
+
+---
+
+### **1-2-hosted-zone-overview.png**
+
+Show:
+
+* Hosted zone: `systemsbyhamza.com`
+* NS + SOA records visible
+
+---
+
+### **1-3-root-alias-a-record.png**
+
+Show:
+
+* A record
+* Name: `systemsbyhamza.com`
+* Alias → CloudFront distribution
+
+---
+
+### **1-4-root-alias-aaaa-record.png**
+
+Show:
+
+* AAAA record
+* Name: `systemsbyhamza.com`
+* Alias → CloudFront distribution
+
+---
+
+### **1-5-www-cname-record.png**
+
+Show:
+
+* CNAME record
+* Name: `www.systemsbyhamza.com`
+* Value → CloudFront domain
+
+*(This also subtly shows you understand DNS limitations/workarounds)*
+
+---
+
+# 📸 SECTION 2 — S3 (PRIVATE ORIGIN)
+
+### **2-1-s3-bucket-overview.png**
+
+Show:
+
+* Bucket name
+* Region
+
+---
+
+### **2-2-s3-block-public-access.png**
+
+Show:
+
+* “Block all public access” = ENABLED (all 4 checked)
+
+---
+
+### **2-3-s3-objects-structure.png**
+
+Show:
+
+```
+index.html
+images/
+```
+
+---
+
+### **2-4-s3-images-folder.png**
+
+Show:
+
+```
+ubuntu.png
+fedora.png
+arch.png
+```
+
+---
+
+### **2-5-s3-bucket-policy.png**
+
+Show:
+
+* Policy allowing **CloudFront only (OAC)**
+* `cloudfront.amazonaws.com` principal
+* Distribution ARN condition
+
+---
+
+### **2-6-s3-access-denied-test.png**
+
+Show:
+
+* Opening an S3 object URL in browser
+* Result: **AccessDenied**
+
+This is a **critical proof screenshot**.
+
+---
+
+# 📸 SECTION 3 — CLOUDFRONT DISTRIBUTION
+
+### **3-1-cloudfront-distribution-overview.png**
+
+Show:
+
+* Distribution ID
+* Status: Deployed
+* Domain name (`xxxxx.cloudfront.net`)
+* `systemsbyhamza.com` listed under alternate domain names
+* `www.systemsbyhamza.com` listed under alternate domain names
+* ACM certificate attached
+* Status valid
+* `index.html` as root object
+
+---
+
+### **3-2-cloudfront-origin-config.png**
+
+Show:
+
+* Origin = S3 bucket (NOT website endpoint)
+* Origin Access Control attached
+* Signing behavior visible
+
+---
+
+
+### **3-3-cloudfront-behavior-settings.png**
+
+Show:
+
+* Viewer protocol policy: Redirect HTTP → HTTPS
+* Cache policy
+
+### **3-4-acm-certificate-issued.png**
+
+Show:
+
+* Certificate status: **Issued**
+* Domains:
+
+  * `systemsbyhamza.com`
+  * `www.systemsbyhamza.com`
+
+---
+
+# 📸 SECTION 4 — LIVE SITE (FUNCTIONAL PROOF)
+
+### **4-1-site-homepage.png**
+
+Show:
+
+* Your full rendered page
+* Linux distro images visible
+
+---
+
+### **4-2-site-https-cert.png**
+
+Show:
+
+* Browser URL bar
+* Lock icon (HTTPS)
+* Shows the certificate
+
+---
+
+### **4-3-image-direct-load.png**
+
+Show:
+
+* Opening:
+
+```id="y7m1yq"
+/images/ubuntu.png
+```
+
+via CloudFront domain
+
+---
+
+# 📸 SECTION 5 — CACHING BEHAVIOR (IMPORTANT)
+
+Open DevTools → Network tab
+
+---
+
+### **5-1-cache-miss.png**
+
+Show:
+
+* First load
+* Header:
+
+```id="0qvqlz"
+X-Cache: Miss from cloudfront
+```
+
+---
+
+### **5-2-cache-hit.png**
+
+Show:
+
+* Refresh request
+* Header:
+
+```id="8nb0zx"
+X-Cache: Hit from cloudfront
+```
+
+---
+
+### **5-3-cache-invalidation.png**
+
+Show:
+
+* CloudFront invalidation:
+
+```
+/*
+```
+
+* Status: Completed
+
+---
+
+### **5-4-cache-after-invalidation.png**
+
+Show:
+
+* After invalidation
+* `Miss from cloudfront` again
+
+---
+
+# 📸 SECTION 6 — DNS VALIDATION (OPTIONAL BUT STRONG)
+
+### **6-1-nslookup-output.png**
+
+Terminal:
+
+```bash id="cgk07o"
+nslookup systemsbyhamza.com
+```
+
+Show:
+
+* Resolves to CloudFront
+
+---
+
+### **6-2-dig-output.png** (optional)
+
+```bash id="3csyv3"
+dig systemsbyhamza.com
+```
+
+---
+
+# 📸 SECTION 7 — ARCHITECTURE PROOF (LOGICAL FLOW)
+
+### **7-1-cloudfront-domain-access.png**
+
+Show:
+
+* Accessing:
+
+```id="m4nq5u"
+https://xxxxx.cloudfront.net
+```
+
+---
+
+### **7-2-custom-domain-access.png**
+
+Show:
+
+* Accessing:
+
+```id="5dyj7b"
+https://systemsbyhamza.com
+```
+
+---
+
+# 🧠 WHY THIS SET IS STRONG
+
+This screenshot set proves:
+
+### Security
+
+* S3 private
+* OAC enforced
+* No direct access
+
+### Networking
+
+* DNS resolution
+* CDN usage
+* edge caching
+
+### Cloud architecture
+
+* multi-service integration
+* production-style setup
+
+---
+
