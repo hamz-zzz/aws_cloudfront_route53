@@ -2,7 +2,7 @@
 
 ## Architecture Diagram
 
-![Architecture](architecture/aws_cloudfront_route53_architecture.svg)
+![Architecture](architecture/aws-cloudfront-route53-architecture.svg)
 
 This project hosts a static website on a private Amazon S3 bucket and serves it through CloudFront using a custom domain managed in Route 53. CloudFront delivers content over HTTPS using an ACM certificate and accesses S3 via Origin Access Control (OAC), which prevents any direct public access to the bucket.
 
