@@ -258,7 +258,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Certificate
 
-![Certificate](screenshots/4-1-acm-certificate-issued.png)
+![Certificate](screenshots/3-4-acm-certificate-issued.png)
 
 - ACM certificate issued in `us-east-1`
 - Attached to CloudFront distribution
@@ -270,7 +270,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Homepage
 
-![Homepage](screenshots/5-1-site-homepage.png)
+![Homepage](screenshots/4-1-site-homepage.png)
 
 - Static site successfully rendered through CloudFront
 - `index.html` served as default root object
@@ -279,7 +279,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### HTTPS Validation
 
-![HTTPS](screenshots/5-2-site-https-cert.png)
+![HTTPS](screenshots/4-2-site-https-cert.png)
 
 - HTTPS enabled via ACM certificate
 - Browser confirms valid TLS connection for custom domain
@@ -288,7 +288,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Static Asset Delivery
 
-![Images](screenshots/5-3-image-direct-load.png)
+![Images](screenshots/4-3-image-direct-load.png)
 
 - Images loaded from `/images` path
 - Objects retrieved from S3 via CloudFront distribution
@@ -300,7 +300,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Cache Miss
 
-![Miss](screenshots/6-1-cache-miss.png)
+![Miss](screenshots/5-1-cache-miss.png)
 
 - First request served from origin via CloudFront
 - Edge cache not yet populated
@@ -309,7 +309,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Cache Hit
 
-![Hit](screenshots/6-2-cache-hit.png)
+![Hit](screenshots/5-2-cache-hit.png)
 
 - Subsequent request served from CloudFront edge cache
 - Origin not contacted
@@ -318,7 +318,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Invalidation
 
-![Invalidation](screenshots/6-3-cache-invalidation.png)
+![Invalidation](screenshots/5-3-cache-invalidation.png)
 
 - Cache invalidation triggered for `/*`
 - Forces edge locations to refresh content from origin
@@ -327,7 +327,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Cache Reset
 
-![Reset](screenshots/6-4-cache-after-invalidation.png)
+![Reset](screenshots/5-4-cache-after-invalidation.png)
 
 - Cache state reset after invalidation
 - Next request results in cache miss
@@ -346,11 +346,11 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### nslookup
 
-![nslookup](screenshots/7-1-nslookup-output.png)
+![nslookup](screenshots/6-1-nslookup-output.png)
 
 ### dig
 
-![dig](screenshots/7-2-dig-output.png)
+![dig](screenshots/6-2-dig-output.png)
 
 - `systemsbyhamza.com` resolves to multiple CloudFront edge IPs
 - Includes both IPv4 and IPv6 records
@@ -362,7 +362,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### CloudFront Domain
 
-![CloudFront](screenshots/8-1-cloudfront-domain-access.png)
+![CloudFront](screenshots/7-1-cloudfront-domain-access.png)
 
 - Direct access via CloudFront distribution domain
 - No DNS abstraction layer involved
@@ -371,7 +371,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### Root Domain
 
-![Root Domain](screenshots/5-1-site-homepage.png)
+![Root Domain](screenshots/4-1-site-homepage.png)
 
 - Access via `https://systemsbyhamza.com`
 - Resolved through Route 53 alias A/AAAA records
@@ -380,7 +380,7 @@ This project implements a secure, globally distributed static website using Amaz
 
 ### WWW Subdomain (CNAME Resolution)
 
-![WWW Domain](screenshots/8-2-www-domain-access.png)
+![WWW Domain](screenshots/7-2-www-domain-access.png)
 
 - Access via `https://www.systemsbyhamza.com`
 - Resolved via CNAME pointing to root domain
