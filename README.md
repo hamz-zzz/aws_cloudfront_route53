@@ -154,8 +154,8 @@ This project hosts a static website on a private Amazon S3 bucket and serves it 
 
 ---
 
-- Route 53 manages DNS resolution for both root and subdomain
-- CloudFront is the single backend origin for all DNS paths
+- Route 53 resolves both root and subdomain using different record types (Alias A/AAAA and CNAME)
+- Both DNS paths ultimately resolve to the same CloudFront distribution, which serves as the application entry point
 
 ---
 
