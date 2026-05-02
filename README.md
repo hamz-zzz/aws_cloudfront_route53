@@ -4,7 +4,7 @@
 
 ![Architecture](architecture/aws_cloudfront_route53_architecture.svg)
 
-This project implements a secure, globally distributed static website using Amazon Route 53, CloudFront, and Amazon S3. Traffic is routed through a custom domain and resolved via DNS, delivered through CloudFront edge locations over HTTPS, and served from a private S3 bucket. The architecture enforces a secure access model using Origin Access Control (OAC), which prevents direct access to the origin and ensures all content is delivered through the CDN.
+This project hosts a static website on a private Amazon S3 bucket and serves it through CloudFront using a custom domain managed in Route 53. CloudFront delivers content over HTTPS using an ACM certificate and accesses S3 via Origin Access Control (OAC), which prevents any direct public access to the bucket.
 
 ---
 
